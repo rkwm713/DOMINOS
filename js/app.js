@@ -254,10 +254,17 @@ function addFilterControls() {
     loadPermits();
   });
   
+  // Add export CSV button
+  const exportButton = document.createElement('button');
+  exportButton.textContent = 'Export to CSV';
+  exportButton.className = 'btn btn-primary export-btn';
+  exportButton.addEventListener('click', exportToCSV);
+  
   // Add to filters container
   filtersContainer.appendChild(sortContainer);
   filtersContainer.appendChild(filterContainer);
   filtersContainer.appendChild(resetButton);
+  filtersContainer.appendChild(exportButton);
   
   // Insert before permits container
   document.querySelector('.permits-section h2').after(filtersContainer);
@@ -699,6 +706,62 @@ function deleteFromLocalStorage(key) {
   
   // Refresh display
   displayPermits(permits);
+}
+
+// Export permits to CSV file
+function exportToCSV() {
+  // Get all permits
+  const permits = getPermitsFromLocalStorage();
+  
+  if (Object.keys(permits).length === 0) {
+    alert('No permits to export');
+    return;
+  }
+  
+  // Define the CSV headers
+  const headers = [
+    'Permit ID', 
+    'Poles', 
+    'Notes', 
+    'Investigated', 
+    'Go Backs', 
+    'Assigned To', 
+    'Status', 
+    'Created At'
+  ];
+  
+  // Convert permits object to array of values
+  const permitData = Object.values(permits).map(permit => [
+    permit.permitId,
+    permit.poles,
+    // Escape quotes in notes to avoid breaking CSV format
+    permit.notes ? `"${permit.notes.replace(/"/g, '""')}"` : '',
+    permit.investigated ? 'Yes' : 'No',
+    permit.gobacks ? 'Yes' : 'No',
+    permit.assigned || 'Unassigned',
+    getStatusDisplayName(permit.status),
+    new Date(permit.createdAt).toLocaleString()
+  ]);
+  
+  // Create CSV content
+  let csvContent = headers.join(',') + '\n';
+  
+  permitData.forEach(row => {
+    csvContent += row.join(',') + '\n';
+  });
+  
+  // Create a download link
+  const encodedUri = encodeURI('data:text/csv;charset=utf-8,' + csvContent);
+  const link = document.createElement('a');
+  link.setAttribute('href', encodedUri);
+  link.setAttribute('download', 'permits_export_' + new Date().toISOString().slice(0,10) + '.csv');
+  
+  // Add to body and trigger download
+  document.body.appendChild(link);
+  link.click();
+  
+  // Clean up
+  document.body.removeChild(link);
 }
 
 // Initialize the app when DOM is loaded
